@@ -26,6 +26,7 @@ INSTALL_PACKAGES=false
 INSTALL_STARSHIP=false
 INSTALL_FONT=false
 DRY_RUN=false
+CHECK_ONLY=false
 
 # ==========================================
 # LOGGING
@@ -64,6 +65,7 @@ Usage:
   ./install.sh [OPTIONS]
 
 Options:
+  --check       Verify installation without modifications
   --dry-run     Simulate Stow operations
   --packages    Install OS packages
   --starship    Install Starship if missing
@@ -81,6 +83,9 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+	--check)
+	    CHECK_ONLY=true
+	    ;;
         --dry-run)
             DRY_RUN=true
             ;;
@@ -417,12 +422,98 @@ install_tmux_plugins() {
     success "tmux plugins ready"
 }
 
+check_installation() {
+    local failed=0
+
+    info "Checking dotfiles installation..."
+
+    local commands=(
+        kitty
+        zsh
+        starship
+        tmux
+        stow
+        git
+        fzf
+        zoxide
+    )
+
+    local cmd
+
+    for cmd in "${commands[@]}"; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+            success "$cmd installed"
+        else
+            warn "$cmd missing"
+            failed=1
+        fi
+    done
+
+    local files=(
+        "$HOME/.zshrc"
+        "$HOME/.tmux.conf"
+        "$HOME/.gitconfig"
+        "$HOME/.config/kitty/kitty.conf"
+        "$HOME/.config/starship.toml"
+        "$HOME/.config/git/personal.gitconfig"
+        "$HOME/.config/git/work.gitconfig"
+    )
+
+    local file
+
+    for file in "${files[@]}"; do
+        if [[ -L "$file" && -f "$file" ]]; then
+            success "Linked: $file"
+        else
+            warn "Missing or not linked: $file"
+            failed=1
+        fi
+    done
+
+    if fc-list : family | grep -i 'JetBrainsMono Nerd Font' >/dev/null; then
+	success "Nerd Font installed"
+    else
+    	warn "Nerd Font missing"
+	failed=1
+    fi
+
+    local plugins=(
+        tpm
+        tmux
+        tmux-resurrect
+        tmux-continuum
+    )
+
+    local plugin
+
+    for plugin in "${plugins[@]}"; do
+        if [[ -d "$HOME/.tmux/plugins/$plugin/.git" ]]; then
+            success "tmux plugin: $plugin"
+        else
+            warn "tmux plugin missing: $plugin"
+            failed=1
+        fi
+    done
+
+    if (( failed )); then
+        error "Some checks failed"
+        return 1
+    fi
+
+    success "All checks passed"
+}
+
 # ==========================================
 # MAIN
 # ==========================================
 
 main() {
     detect_os
+
+    if [[ "$CHECK_ONLY" == true ]]; then
+        check_installation
+        return
+    fi
 
     if [[ "$DRY_RUN" == true ]]; then
         info "DRY-RUN MODE"
