@@ -1,0 +1,150 @@
+# ==========================================
+# STARSHIP — MODERN MINIMAL
+# Catppuccin Mocha
+# ==========================================
+
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$cmake\
+$c\
+$python\
+$rust\
+$docker_context\
+$cmd_duration\
+$line_break\
+$character"""
+
+palette = "catppuccin_mocha"
+
+# ------------------------------------------
+# COLORS
+# ------------------------------------------
+
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext = "#a6adc8"
+overlay = "#6c7086"
+
+# ------------------------------------------
+# USER / HOST
+# ------------------------------------------
+
+[username]
+show_always = false
+style_user = "blue"
+format = "[$user]($style)@"
+
+[hostname]
+ssh_only = true
+style = "blue"
+format = "[$hostname]($style)  "
+
+# ------------------------------------------
+# DIRECTORY
+# ------------------------------------------
+
+[directory]
+style = "bold blue"
+format = "[$path]($style) "
+truncation_length = 3
+truncation_symbol = "…/"
+
+# ------------------------------------------
+# GIT
+# ------------------------------------------
+
+[git_branch]
+symbol = " "
+style = "mauve"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "yellow"
+format = '([$all_status$ahead_behind]($style) )'
+
+conflicted = "≠"
+ahead = "⇡"
+behind = "⇣"
+diverged = "⇕"
+untracked = "?"
+stashed = "$"
+modified = "!"
+staged = "+"
+renamed = "»"
+deleted = "✘"
+
+# ------------------------------------------
+# C / CMAKE
+# ------------------------------------------
+
+[c]
+symbol = "C "
+style = "blue"
+format = "[$symbol($version)]($style) "
+
+[cmake]
+symbol = "󰔷 "
+style = "teal"
+format = "[$symbol CMake]($style) "
+
+# ------------------------------------------
+# PYTHON / RUST
+# ------------------------------------------
+
+[python]
+symbol = "Py "
+style = "yellow"
+format = "[$symbol$version]($style) "
+
+[rust]
+symbol = "Rs "
+style = "peach"
+format = "[$symbol$version]($style) "
+
+# ------------------------------------------
+# DOCKER
+# ------------------------------------------
+
+[docker_context]
+symbol = "Docker "
+style = "sapphire"
+format = "[$symbol$context]($style) "
+
+# ------------------------------------------
+# PROMPT
+# ------------------------------------------
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold mauve)"
+
+[cmd_duration]
+min_time = 2000
+format = "took [$duration]($style) "
+style = "yellow"
+show_milliseconds = false
+
+[battery]
+disabled = true
