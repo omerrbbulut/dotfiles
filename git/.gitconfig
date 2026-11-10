@@ -1,0 +1,14 @@
+[init]
+    defaultBranch = main
+
+[core]
+    editor = nvim
+
+[includeIf "gitdir:~/projects/personal/"]
+    path = ~/.config/git/personal.gitconfig
+
+[includeIf "gitdir:~/projects/work/"]
+    path = ~/.config/git/work.gitconfig
+
+[user]
+    useConfigOnly = true
