@@ -1,14 +1,60 @@
+# ==========================================
+# GIT CONFIGURATION
+# ==========================================
+
+# ------------------------------------------
+# DEFAULT SETTINGS
+# ------------------------------------------
+
 [init]
     defaultBranch = main
 
 [core]
     editor = nvim
 
-[includeIf "gitdir:~/projects/personal/"]
+# ------------------------------------------
+# PERSONAL GITHUB
+# ------------------------------------------
+
+# Standard GitHub SSH URL
+# git@github.com:username/repository.git
+[includeIf "hasconfig:remote.*.url:git@github.com:*/**"]
     path = ~/.config/git/personal.gitconfig
 
-[includeIf "gitdir:~/projects/work/"]
+# GitHub SSH alias
+# git@github-personal:username/repository.git
+[includeIf "hasconfig:remote.*.url:git@github-personal:*/**"]
+    path = ~/.config/git/personal.gitconfig
+
+# GitHub SSH URL (explicit protocol)
+# ssh://git@github.com/username/repository.git
+[includeIf "hasconfig:remote.*.url:ssh://git@github.com/**"]
+    path = ~/.config/git/personal.gitconfig
+
+# GitHub HTTPS URL
+# https://github.com/username/repository.git
+[includeIf "hasconfig:remote.*.url:https://github.com/**"]
+    path = ~/.config/git/personal.gitconfig
+
+# ------------------------------------------
+# CORPORATE GITLAB
+# ------------------------------------------
+
+# Corporate GitLab SSH alias
+# git@gitlab-work:group/repository.git
+[includeIf "hasconfig:remote.*.url:git@gitlab-work:*/**"]
     path = ~/.config/git/work.gitconfig
 
+# Corporate GitLab SSH URL (explicit protocol)
+# ssh://git@gitlab-work/group/repository.git
+[includeIf "hasconfig:remote.*.url:ssh://git@gitlab-work/**"]
+    path = ~/.config/git/work.gitconfig
+
+# ------------------------------------------
+# IDENTITY SAFETY
+# ------------------------------------------
+
+# Never guess user.name or user.email.
+# Require an explicitly configured identity.
 [user]
     useConfigOnly = true
