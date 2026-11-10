@@ -20,11 +20,13 @@ STOW_PACKAGES=(
     starship
     tmux
     git
+    ssh
 )
 
 INSTALL_PACKAGES=false
 INSTALL_STARSHIP=false
 INSTALL_FONT=false
+INSTALL_SSH=false
 DRY_RUN=false
 CHECK_ONLY=false
 
@@ -70,7 +72,8 @@ Options:
   --packages    Install OS packages
   --starship    Install Starship if missing
   --font        Install JetBrainsMono Nerd Font if missing
-  --all         Run all installation steps
+  --ssh         Configure SSH keys and agent
+  --all         Run all installation steps including SSH
   -h, --help    Show this help
 
 Without options, only Stow links are managed.
@@ -98,10 +101,14 @@ while [[ $# -gt 0 ]]; do
         --font)
             INSTALL_FONT=true
             ;;
+        --ssh)
+            INSTALL_SSH=true
+            ;;
         --all)
             INSTALL_PACKAGES=true
             INSTALL_STARSHIP=true
             INSTALL_FONT=true
+	    INSTALL_SSH=true
             ;;
         -h|--help)
             usage
@@ -269,11 +276,39 @@ install_font() {
 }
 
 # ==========================================
+# SSH SETUP
+# ==========================================
+
+install_ssh() {
+    local script="$DOTFILES_DIR/scripts/setup-ssh.sh"
+
+    [[ -f "$script" ]] ||
+        die "SSH setup script missing: $script"
+
+    require_command ssh
+    require_command ssh-keygen
+    require_command ssh-add
+
+    info "Setting up SSH..."
+
+    bash "$script"
+
+    success "SSH setup completed"
+}
+
+# ==========================================
 # GNU STOW
 # ==========================================
 
 install_dotfiles() {
     require_command stow
+
+
+    # Secure SSH directory before creating Stow links
+    if [[ "$DRY_RUN" != true ]]; then
+        mkdir -p "$HOME/.ssh"
+        chmod 700 "$HOME/.ssh"
+    fi
 
     info "Dotfiles directory: $DOTFILES_DIR"
     info "Target directory: $HOME"
@@ -457,6 +492,7 @@ check_installation() {
         "$HOME/.config/starship.toml"
         "$HOME/.config/git/personal.gitconfig"
         "$HOME/.config/git/work.gitconfig"
+	"$HOME/.ssh/config"
     )
 
     local file
@@ -476,6 +512,54 @@ check_installation() {
     	warn "Nerd Font missing"
 	failed=1
     fi
+
+
+    # --------------------------------------
+    # SSH VERIFICATION
+    # --------------------------------------
+
+    if [[ -d "$HOME/.ssh" ]] &&
+       [[ "$(stat -c '%a' "$HOME/.ssh")" == "700" ]]; then
+        success "SSH directory permissions: 700"
+    else
+        warn "SSH directory missing or permissions incorrect"
+        failed=1
+    fi
+
+    if [[ -f "$HOME/.ssh/github_personal" &&
+          -f "$HOME/.ssh/github_personal.pub" ]]; then
+        success "GitHub SSH key pair available"
+    else
+        warn "GitHub SSH key pair missing"
+        failed=1
+    fi
+
+    if [[ -f "$HOME/.ssh/gitlab_work" &&
+          -f "$HOME/.ssh/gitlab_work.pub" ]]; then
+        success "GitLab SSH key pair available"
+    else
+        warn "GitLab SSH key pair missing"
+        failed=1
+    fi
+
+    if [[ -f "$HOME/.ssh/config.work" ]]; then
+        success "Corporate SSH configuration available"
+    else
+        warn "Corporate SSH configuration missing"
+        failed=1
+    fi
+
+    if [[ -n "${SSH_AUTH_SOCK:-}" &&
+          -S "${SSH_AUTH_SOCK:-}" ]] &&
+       ssh-add -l >/dev/null 2>&1; then
+        success "SSH agent accessible"
+    else
+        warn "SSH agent unavailable or no identities loaded"
+    fi
+
+    # --------------------------------------
+    # TMUX PLUGIN VERIFICATION
+    # --------------------------------------
 
     local plugins=(
         tpm
@@ -520,7 +604,8 @@ main() {
 
         if [[ "$INSTALL_PACKAGES" == true ||
               "$INSTALL_STARSHIP" == true ||
-              "$INSTALL_FONT" == true ]]; then
+              "$INSTALL_FONT" == true ||
+	      "$INSTALL_SSH" == true ]]; then
             warn "Skipping all software installations in dry-run mode"
         fi
     else
@@ -546,6 +631,12 @@ main() {
 
     # Create GNU Stow symlinks
     install_dotfiles
+
+    # Configure SSH if requested
+    if [[ "$INSTALL_SSH" == true &&
+	  "$DRY_RUN" != true ]]; then
+	install_ssh
+    fi
 
     # Install TPM and configured tmux plugins
     install_tmux_plugins
