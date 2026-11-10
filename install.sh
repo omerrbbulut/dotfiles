@@ -19,6 +19,7 @@ STOW_PACKAGES=(
     zsh
     starship
     tmux
+    git
 )
 
 INSTALL_PACKAGES=false
