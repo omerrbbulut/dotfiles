@@ -143,6 +143,25 @@ require_command() {
         die "Required command not found: $1"
 }
 
+check_requirements() {
+    info "Checking installation requirements..."
+
+    local missing=()
+    local cmd
+
+    for cmd in git curl stow tmux; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if (( ${#missing[@]} > 0 )); then
+        die "Required tools are missing: ${missing[*]}"
+    fi
+
+    success "All required tools available"
+}
+
 # ==========================================
 # SYSTEM PACKAGES
 # ==========================================
@@ -414,10 +433,17 @@ main() {
             warn "Skipping all software installations in dry-run mode"
         fi
     else
+        # Install OS packages first if requested
         if [[ "$INSTALL_PACKAGES" == true ]]; then
             install_system_packages
         fi
+    fi
 
+    # Verify dependencies after optional package installation
+    check_requirements
+
+    if [[ "$DRY_RUN" != true ]]; then
+        # Install optional components
         if [[ "$INSTALL_STARSHIP" == true ]]; then
             install_starship
         fi
@@ -427,13 +453,14 @@ main() {
         fi
     fi
 
+    # Create GNU Stow symlinks
     install_dotfiles
 
-    # Install tmux plugins after Stow configuration
+    # Install TPM and configured tmux plugins
     install_tmux_plugins
 
     if [[ "$DRY_RUN" != true ]]; then
-	verify_installation
+        verify_installation
     fi
 
     success "Dotfiles setup completed!"
