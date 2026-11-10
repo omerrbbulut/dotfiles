@@ -322,6 +322,83 @@ verify_installation() {
 }
 
 # ==========================================
+# TMUX PLUGINS
+# ==========================================
+
+install_tmux_plugins() {
+    local plugin_dir="$HOME/.tmux/plugins"
+    local tpm_dir="$plugin_dir/tpm"
+
+    info "Checking tmux plugins..."
+
+    if [[ "$DRY_RUN" == true ]]; then
+        info "[DRY-RUN] Would check/install TPM"
+        info "[DRY-RUN] Would install configured tmux plugins"
+        return 0
+    fi
+
+    require_command git
+    require_command tmux
+
+    # --------------------------------------
+    # INSTALL TPM
+    # --------------------------------------
+
+    if [[ -d "$tpm_dir/.git" ]]; then
+        success "TPM already installed"
+    elif [[ -e "$tpm_dir" ]]; then
+        die "TPM directory exists but is not a Git repository: $tpm_dir"
+    else
+        info "Installing TPM..."
+
+        mkdir -p "$plugin_dir"
+
+        git clone --depth 1 \
+            https://github.com/tmux-plugins/tpm \
+            "$tpm_dir"
+
+        success "TPM installed"
+    fi
+
+    # --------------------------------------
+    # INSTALL PLUGINS
+    # --------------------------------------
+
+    local installer="$tpm_dir/bin/install_plugins"
+
+    [[ -x "$installer" ]] ||
+        die "TPM plugin installer not found: $installer"
+
+    [[ -f "$HOME/.tmux.conf" ]] ||
+        die "tmux configuration not found"
+
+    info "Installing configured tmux plugins..."
+
+    "$installer" ||
+        die "tmux plugin installation failed"
+
+    # --------------------------------------
+    # VERIFY PLUGINS
+    # --------------------------------------
+
+    local plugin
+
+    for plugin in \
+        tmux \
+        tmux-resurrect \
+        tmux-continuum
+    do
+        if [[ -d "$plugin_dir/$plugin/.git" ]]; then
+            success "$plugin installed"
+        else
+            die "Missing or incomplete tmux plugin: $plugin"
+        fi
+    done
+
+    success "tmux plugins ready"
+}
+
+# ==========================================
 # MAIN
 # ==========================================
 
@@ -352,8 +429,11 @@ main() {
 
     install_dotfiles
 
+    # Install tmux plugins after Stow configuration
+    install_tmux_plugins
+
     if [[ "$DRY_RUN" != true ]]; then
-        verify_installation
+	verify_installation
     fi
 
     success "Dotfiles setup completed!"
