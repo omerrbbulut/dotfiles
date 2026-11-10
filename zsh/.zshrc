@@ -3,6 +3,19 @@
 # ==========================================
 
 # ------------------------------------------
+# USER BINARIES
+# ------------------------------------------
+
+typeset -U path
+
+path=(
+    "$HOME/.local/bin"
+    $path
+)
+
+export PATH
+
+# ------------------------------------------
 # HISTORY
 # ------------------------------------------
 
@@ -54,11 +67,18 @@ fi
 
 # ------------------------------------------
 # AUTOSUGGESTIONS
+# Ubuntu / Arch compatible
 # ------------------------------------------
 
-if [[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-    source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-fi
+for plugin in \
+    /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+do
+    if [[ -f "$plugin" ]]; then
+        source "$plugin"
+        break
+    fi
+done
 
 # ------------------------------------------
 # ALIASES
@@ -91,8 +111,15 @@ fi
 # ------------------------------------------
 # SYNTAX HIGHLIGHTING
 # Keep near the end
+# Ubuntu / Arch compatible
 # ------------------------------------------
 
-if [[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-    source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-fi
+for plugin in \
+    /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+do
+    if [[ -f "$plugin" ]]; then
+        source "$plugin"
+        break
+    fi
+done
