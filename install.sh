@@ -126,7 +126,8 @@ done
 # ==========================================
 
 detect_os() {
-    [[ -f /etc/os-release ]] || die "Cannot detect OS."
+    [[ -f /etc/os-release ]] ||
+        die "Cannot detect operating system."
 
     # shellcheck disable=SC1091
     source /etc/os-release
@@ -134,16 +135,24 @@ detect_os() {
     case "$ID" in
         ubuntu)
             OS="ubuntu"
-            ;;
-        arch)
-            OS="arch"
+
+            case "${VERSION_ID:-}" in
+                "24.04")
+                    success "Supported Ubuntu version: $PRETTY_NAME"
+                    ;;
+                "26.04")
+                    warn "Ubuntu 26.04 support is experimental."
+                    warn "Installation has not been validated on this release."
+                    ;;
+                *)
+                    die "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Supported: 24.04, experimental: 26.04."
+                    ;;
+            esac
             ;;
         *)
-            die "Unsupported distribution: $ID"
+            die "Unsupported distribution: $ID. Arch Linux support is future work."
             ;;
     esac
-
-    success "Detected OS: $PRETTY_NAME"
 }
 
 # ==========================================
@@ -159,9 +168,22 @@ check_requirements() {
     info "Checking installation requirements..."
 
     local missing=()
+    local commands=(stow)
     local cmd
 
-    for cmd in git curl stow tmux; do
+    # tmux is required only for actual plugin installation.
+    if [[ "$DRY_RUN" != true ]]; then
+        commands+=(git tmux)
+    fi
+
+    # curl is required when downloading Starship or Nerd Font.
+    if [[ "$DRY_RUN" != true ]] &&
+       [[ "$INSTALL_STARSHIP" == true ||
+          "$INSTALL_FONT" == true ]]; then
+        commands+=(curl)
+    fi
+
+    for cmd in "${commands[@]}"; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             missing+=("$cmd")
         fi
@@ -226,11 +248,18 @@ install_starship() {
         return
     fi
 
-    sh "$installer" -b "$HOME/.local/bin"
+    local install_dir="$HOME/.local/bin"
+
+    mkdir -p "$install_dir"
+
+    if ! sh "$installer" -b "$install_dir" -y; then
+        rm -f "$installer"
+        die "Starship installation failed."
+    fi
 
     rm -f "$installer"
 
-    success "Starship installed to ~/.local/bin"
+    success "Starship installed to $install_dir"
 }
 
 # ==========================================
@@ -588,16 +617,71 @@ check_installation() {
 }
 
 # ==========================================
+# PRE-INSTALLATION CHECKS
+# ==========================================
+
+preflight_stow() {
+    info "Running Stow preflight checks..."
+
+    # Bootstrap GNU Stow on a fresh Ubuntu installation.
+    if ! command -v stow >/dev/null 2>&1; then
+        if [[ "$DRY_RUN" == true ]]; then
+            die "GNU Stow is required for dry-run. Install stow first."
+        fi
+
+        if [[ "$INSTALL_PACKAGES" != true ]]; then
+            die "GNU Stow is missing. Install stow or use --all."
+        fi
+
+        info "Installing GNU Stow bootstrap dependency..."
+
+        sudo apt-get update
+        sudo apt-get install -y stow
+    fi
+
+    require_command stow
+
+    # Check all expected Stow packages exist.
+    local package
+
+    for package in "${STOW_PACKAGES[@]}"; do
+        [[ -d "$DOTFILES_DIR/$package" ]] ||
+            die "Missing Stow package: $package"
+    done
+
+    # Check for conflicts without modifying files.
+    if ! stow \
+        -d "$DOTFILES_DIR" \
+        -t "$HOME" \
+        --no-folding \
+        -nv \
+        "${STOW_PACKAGES[@]}"; then
+
+        die "Stow conflicts detected. Installation aborted."
+    fi
+
+    success "Stow preflight checks passed"
+}
+
+# ==========================================
 # MAIN
 # ==========================================
 
 main() {
     detect_os
 
+    # --------------------------------------
+    # CHECK ONLY
+    # --------------------------------------
+
     if [[ "$CHECK_ONLY" == true ]]; then
         check_installation
         return
     fi
+
+    # --------------------------------------
+    # DRY RUN
+    # --------------------------------------
 
     if [[ "$DRY_RUN" == true ]]; then
         info "DRY-RUN MODE"
@@ -605,21 +689,37 @@ main() {
         if [[ "$INSTALL_PACKAGES" == true ||
               "$INSTALL_STARSHIP" == true ||
               "$INSTALL_FONT" == true ||
-	      "$INSTALL_SSH" == true ]]; then
+              "$INSTALL_SSH" == true ]]; then
             warn "Skipping all software installations in dry-run mode"
-        fi
-    else
-        # Install OS packages first if requested
-        if [[ "$INSTALL_PACKAGES" == true ]]; then
-            install_system_packages
         fi
     fi
 
-    # Verify dependencies after optional package installation
+    # --------------------------------------
+    # PRE-INSTALLATION CHECKS
+    # --------------------------------------
+
+    preflight_stow
+
+    # --------------------------------------
+    # SYSTEM PACKAGES
+    # --------------------------------------
+
+    if [[ "$DRY_RUN" != true &&
+          "$INSTALL_PACKAGES" == true ]]; then
+        install_system_packages
+    fi
+
+    # --------------------------------------
+    # DEPENDENCIES
+    # --------------------------------------
+
     check_requirements
 
+    # --------------------------------------
+    # OPTIONAL COMPONENTS
+    # --------------------------------------
+
     if [[ "$DRY_RUN" != true ]]; then
-        # Install optional components
         if [[ "$INSTALL_STARSHIP" == true ]]; then
             install_starship
         fi
@@ -629,17 +729,30 @@ main() {
         fi
     fi
 
-    # Create GNU Stow symlinks
+    # --------------------------------------
+    # GNU STOW
+    # --------------------------------------
+
     install_dotfiles
 
-    # Configure SSH if requested
+    # --------------------------------------
+    # SSH
+    # --------------------------------------
+
     if [[ "$INSTALL_SSH" == true &&
-	  "$DRY_RUN" != true ]]; then
-	install_ssh
+          "$DRY_RUN" != true ]]; then
+        install_ssh
     fi
 
-    # Install TPM and configured tmux plugins
+    # --------------------------------------
+    # TMUX PLUGINS
+    # --------------------------------------
+
     install_tmux_plugins
+
+    # --------------------------------------
+    # VERIFICATION
+    # --------------------------------------
 
     if [[ "$DRY_RUN" != true ]]; then
         verify_installation

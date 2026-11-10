@@ -99,6 +99,29 @@ PACKAGES=(
 log "Updating package indexes..."
 sudo apt-get update
 
+log "Checking package availability..."
+
+MISSING_PACKAGES=()
+
+for package in "${PACKAGES[@]}"; do
+    candidate="$(
+        apt-cache policy "$package" |
+            awk '/Candidate:/ {print $2; exit}'
+    )"
+
+    if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
+        MISSING_PACKAGES+=("$package")
+    fi
+done
+
+if (( ${#MISSING_PACKAGES[@]} > 0 )); then
+    error "Packages unavailable: ${MISSING_PACKAGES[*]}"
+    error "Check enabled Ubuntu repositories, including universe."
+    exit 1
+fi
+
+log "All requested packages are available."
+
 log "Installing packages..."
 sudo apt-get install -y "${PACKAGES[@]}"
 
@@ -109,24 +132,47 @@ sudo apt-get install -y "${PACKAGES[@]}"
 log "Configuring CLI compatibility..."
 
 USER_BIN="$HOME/.local/bin"
-
 mkdir -p "$USER_BIN"
 
-# fd-find -> fd
-if command -v fdfind >/dev/null 2>&1; then
-    if ! command -v fd >/dev/null 2>&1; then
-        ln -sfn "$(command -v fdfind)" "$USER_BIN/fd"
-        log "Created fd -> fdfind"
-    fi
-fi
+create_compat_link() {
+    local source_cmd="$1"
+    local target_cmd="$2"
+    local source_path
+    local target_path="$USER_BIN/$target_cmd"
 
-# batcat -> bat
-if command -v batcat >/dev/null 2>&1; then
-    if ! command -v bat >/dev/null 2>&1; then
-        ln -sfn "$(command -v batcat)" "$USER_BIN/bat"
-        log "Created bat -> batcat"
+    # Nothing to do if the standard command already exists.
+    if command -v "$target_cmd" >/dev/null 2>&1; then
+        log "$target_cmd already available"
+        return 0
     fi
-fi
+
+    # Verify the Ubuntu-specific command exists.
+    if ! source_path="$(command -v "$source_cmd")"; then
+        error "Command not found: $source_cmd"
+        return 1
+    fi
+
+    # Preserve an existing correct symlink.
+    if [[ -L "$target_path" ]] &&
+       [[ "$(readlink "$target_path")" == "$source_path" ]]; then
+	log "$target_cmd compatibility link already configured"
+	return 0
+    fi
+
+    # Never overwrite an existing file or unrelated symlink.
+    if [[ -e "$target_path" || -L "$target_path" ]]; then
+	error "Conflicting path: $target_path"
+	return 1
+    fi
+
+    ln -s "$source_path" "$target_path"
+
+    log "Created $target_cmd -> $source_cmd"
+}
+
+# Ubuntu may provide these binaries under different names.
+create_compat_link fdfind fd
+create_compat_link batcat bat
 
 # ------------------------------------------
 # FINISH
