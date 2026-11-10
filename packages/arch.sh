@@ -93,11 +93,9 @@ PACKAGES=(
 # PACMAN
 # ------------------------------------------
 
-log "Synchronizing repositories and upgrading system..."
-sudo pacman -Syu --noconfirm
+log "Updating system and installing required packages..."
 
-log "Installing packages..."
-sudo pacman -S --needed --noconfirm "${PACKAGES[@]}"
+sudo pacman -Syu --needed "${PACKAGES[@]}"
 
 # ------------------------------------------
 # FINISH
