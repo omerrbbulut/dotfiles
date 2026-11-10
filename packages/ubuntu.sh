@@ -103,17 +103,29 @@ log "Installing packages..."
 sudo apt-get install -y "${PACKAGES[@]}"
 
 # ------------------------------------------
-# UBUNTU COMMAND ALIASES
+# UBUNTU CLI COMPATIBILITY
 # ------------------------------------------
 
-log "Checking fd and bat binaries..."
+log "Configuring CLI compatibility..."
 
+USER_BIN="$HOME/.local/bin"
+
+mkdir -p "$USER_BIN"
+
+# fd-find -> fd
 if command -v fdfind >/dev/null 2>&1; then
-    log "fd-find installed as fdfind"
+    if ! command -v fd >/dev/null 2>&1; then
+        ln -sfn "$(command -v fdfind)" "$USER_BIN/fd"
+        log "Created fd -> fdfind"
+    fi
 fi
 
+# batcat -> bat
 if command -v batcat >/dev/null 2>&1; then
-    log "bat installed as batcat"
+    if ! command -v bat >/dev/null 2>&1; then
+        ln -sfn "$(command -v batcat)" "$USER_BIN/bat"
+        log "Created bat -> batcat"
+    fi
 fi
 
 # ------------------------------------------
