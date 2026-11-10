@@ -14,6 +14,20 @@ DOTFILES_DIR="$(
 
 PACKAGES_DIR="$DOTFILES_DIR/packages"
 
+# ------------------------------------------
+# USER EXECUTABLE PATH
+# ------------------------------------------
+
+USER_BIN="$HOME/.local/bin"
+
+case ":$PATH:" in
+    *":$USER_BIN:"*)
+        ;;
+    *)
+        export PATH="$USER_BIN:$PATH"
+        ;;
+esac
+
 STOW_PACKAGES=(
     kitty
     zsh
