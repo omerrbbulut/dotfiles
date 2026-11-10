@@ -20,8 +20,18 @@ warn() {
 confirm() {
     local answer
 
-    read -r -p "$1 [y/N]: " answer
-    [[ "$answer" == "y" || "$answer" == "Y" ]]
+    # Do not prompt when standard input is not interactive.
+    if [[ ! -t 0 ]]; then
+        warn "Non-interactive session: skipping prompt: $1"
+        return 1
+    fi
+
+    if ! read -r -p "$1 [y/N]: " answer; then
+        warn "Unable to read user input."
+        return 1
+    fi
+
+    [[ "$answer" =~ ^[Yy]$ ]]
 }
 
 create_key() {
@@ -108,10 +118,6 @@ configure_work_gitlab() {
         return
     fi
 
-    if ! confirm "Configure corporate GitLab?"; then
-        return
-    fi
-
     read -r -p "GitLab hostname or IP: " hostname
     read -r -p "GitLab SSH port [22]: " port
 
@@ -132,6 +138,7 @@ configure_work_gitlab() {
 
     (
         umask 077
+        set -C
 
         cat > "$WORK_CONFIG" <<EOF
 # Local corporate SSH configuration
@@ -145,8 +152,10 @@ Host gitlab-work
     IdentitiesOnly yes
     AddKeysToAgent yes
 EOF
-    )
-
+    ) || {
+        warn "Could not safely create $WORK_CONFIG"
+        return 1
+    }
     ok "Corporate SSH configuration created"
 }
 
@@ -156,16 +165,73 @@ main() {
     mkdir -p "$SSH_DIR"
     chmod 700 "$SSH_DIR"
 
-    create_key github_personal "omerrbbulut@gmail.com"
-    create_key gitlab_work "work@example.com"
+    # --------------------------------------
+    # PERSONAL GITHUB
+    # --------------------------------------
 
-    configure_work_gitlab
+    create_key github_personal "omerrbbulut@gmail.com"
+
+    # --------------------------------------
+    # CORPORATE GITLAB (OPTIONAL)
+    # --------------------------------------
+
+    if [[ -e "$WORK_CONFIG" || -L "$WORK_CONFIG" ]]; then
+        ok "Existing work configuration preserved"
+
+        create_key gitlab_work "work@example.com"
+
+    elif confirm "Configure corporate GitLab?"; then
+
+        create_key gitlab_work "work@example.com"
+
+        if [[ -f "$SSH_DIR/gitlab_work" &&
+              -f "$SSH_DIR/gitlab_work.pub" ]]; then
+
+            configure_work_gitlab
+
+        else
+            warn "GitLab SSH key is missing."
+            warn "Corporate GitLab configuration skipped."
+        fi
+
+    else
+        log "Corporate GitLab setup skipped"
+    fi
+
+    # --------------------------------------
+    # SSH AGENT
+    # --------------------------------------
 
     add_key_to_agent "$SSH_DIR/github_personal"
     add_key_to_agent "$SSH_DIR/gitlab_work"
 
-    log "SSH agent identities:"
-    ssh-add -l || true
+    # --------------------------------------
+    # AGENT STATUS
+    # --------------------------------------
+
+    if [[ -n "${SSH_AUTH_SOCK:-}" &&
+          -S "${SSH_AUTH_SOCK:-}" ]]; then
+
+        local agent_status
+
+        ssh-add -l >/dev/null 2>&1 &&
+            agent_status=0 || agent_status=$?
+
+        case "$agent_status" in
+            0)
+                log "SSH agent identities:"
+                ssh-add -l
+                ;;
+            1)
+                log "SSH agent is available but has no identities."
+                ;;
+            *)
+                warn "SSH agent is not responding."
+                ;;
+        esac
+    else
+        log "SSH agent is not available in this session."
+    fi
 
     ok "SSH setup completed"
 }

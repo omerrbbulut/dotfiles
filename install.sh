@@ -542,7 +542,6 @@ check_installation() {
 	failed=1
     fi
 
-
     # --------------------------------------
     # SSH VERIFICATION
     # --------------------------------------
@@ -555,35 +554,67 @@ check_installation() {
         failed=1
     fi
 
-    if [[ -f "$HOME/.ssh/github_personal" &&
-          -f "$HOME/.ssh/github_personal.pub" ]]; then
-        success "GitHub SSH key pair available"
-    else
-        warn "GitHub SSH key pair missing"
-        failed=1
-    fi
+    local ssh_keys_found=0
+    local key
 
-    if [[ -f "$HOME/.ssh/gitlab_work" &&
-          -f "$HOME/.ssh/gitlab_work.pub" ]]; then
-        success "GitLab SSH key pair available"
-    else
-        warn "GitLab SSH key pair missing"
-        failed=1
+    for key in github_personal gitlab_work; do
+        local private_key="$HOME/.ssh/$key"
+        local public_key="$private_key.pub"
+
+        if [[ -f "$private_key" && -f "$public_key" ]]; then
+            success "SSH key pair: $key"
+            ((ssh_keys_found += 1))
+
+            # Private keys must not be accessible to others.
+            local key_mode
+            key_mode="$(stat -c '%a' "$private_key")"
+
+            if (( (8#$key_mode & 077) != 0 )); then
+                warn "Insecure permissions: $private_key ($key_mode)"
+                failed=1
+            fi
+
+        elif [[ -e "$private_key" || -e "$public_key" ]]; then
+            warn "Incomplete SSH key pair: $key"
+            failed=1
+
+        else
+            info "SSH identity not configured: $key"
+        fi
+    done
+
+    if (( ssh_keys_found == 0 )); then
+        warn "No SSH identities configured"
     fi
 
     if [[ -f "$HOME/.ssh/config.work" ]]; then
         success "Corporate SSH configuration available"
     else
-        warn "Corporate SSH configuration missing"
-        failed=1
+        info "Corporate GitLab configuration not present (optional)"
     fi
 
     if [[ -n "${SSH_AUTH_SOCK:-}" &&
-          -S "${SSH_AUTH_SOCK:-}" ]] &&
-       ssh-add -l >/dev/null 2>&1; then
-        success "SSH agent accessible"
+          -S "${SSH_AUTH_SOCK:-}" ]]; then
+
+        local agent_status
+
+        ssh-add -l >/dev/null 2>&1 &&
+            agent_status=0 || agent_status=$?
+
+        case "$agent_status" in
+            0)
+                success "SSH agent accessible"
+                ;;
+            1)
+                info "SSH agent available but empty"
+                ;;
+            *)
+                warn "SSH agent unavailable"
+                ;;
+        esac
+
     else
-        warn "SSH agent unavailable or no identities loaded"
+        info "SSH agent not active in this session"
     fi
 
     # --------------------------------------
