@@ -84,7 +84,17 @@ done
 # ALIASES
 # ------------------------------------------
 
-alias ll='ls -lah'
+# Directory listings: eza when available, colored ls otherwise
+if command -v eza >/dev/null 2>&1; then
+    alias ls='eza --group-directories-first --icons=auto'
+    alias ll='eza -lah --group-directories-first --icons=auto --git --time-style=long-iso'
+    alias la='eza -a --group-directories-first --icons=auto'
+    alias lt='eza --tree --level=2 --group-directories-first --icons=auto --git-ignore'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -lah --color=auto'
+    alias la='ls -A --color=auto'
+fi
 alias ..='cd ..'
 alias ...='cd ../..'
 
