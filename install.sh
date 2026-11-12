@@ -151,15 +151,11 @@ detect_os() {
             OS="ubuntu"
 
             case "${VERSION_ID:-}" in
-                "24.04")
+                "24.04"|"26.04")
                     success "Supported Ubuntu version: $PRETTY_NAME"
                     ;;
-                "26.04")
-                    warn "Ubuntu 26.04 support is experimental."
-                    warn "Installation has not been validated on this release."
-                    ;;
                 *)
-                    die "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Supported: 24.04, experimental: 26.04."
+                    die "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Supported: 24.04, 26.04."
                     ;;
             esac
             ;;
