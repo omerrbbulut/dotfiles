@@ -18,6 +18,7 @@ Designed for a consistent, reproducible terminal-based development environment a
 | Package Manager | APT |
 | Configuration Management | GNU Stow |
 | Version Control | Git |
+| GitHub CLI | gh (official GitHub apt repository) |
 | SSH Authentication | OpenSSH Agent |
 | CLI Tools | eza, fzf, zoxide, ripgrep, fd, bat, btop |
 
@@ -92,7 +93,7 @@ Review the installation scripts before executing them.
 The full installation performs the following operations:
 
 1. Detect the operating system.
-2. Install required Ubuntu packages.
+2. Install required Ubuntu packages and the GitHub CLI.
 3. Install Starship if missing.
 4. Install JetBrainsMono Nerd Font if missing.
 5. Create GNU Stow configuration symlinks.
@@ -174,7 +175,28 @@ git remote set-url origin git@github.com:<username>/dotfiles.git
 git fetch origin
 ```
 
-### 4. Set Zsh as the Login Shell (Optional)
+### 4. Log In to the GitHub CLI
+
+```bash
+gh auth login
+```
+
+Choose:
+
+- **GitHub.com**
+- **SSH** as the Git protocol
+- The existing `~/.ssh/github_personal.pub` key. Do not generate or upload a new one.
+- **Login with a web browser**
+
+Verify:
+
+```bash
+gh auth status
+```
+
+`./install.sh --check` warns when the GitHub CLI is not logged in.
+
+### 5. Set Zsh as the Login Shell (Optional)
 
 Other terminals and SSH logins use the login shell. To use Zsh everywhere:
 
@@ -184,7 +206,7 @@ chsh -s /usr/bin/zsh
 
 Log out and back in for the change to take effect.
 
-### 5. Post-Quantum Key Exchange Warning (Optional)
+### 6. Post-Quantum Key Exchange Warning (Optional)
 
 OpenSSH 10 and later warn when a server does not support post-quantum key exchange:
 
@@ -202,7 +224,7 @@ To silence the warning for the corporate server only, add the following to the `
 
 Do not disable it globally.
 
-### 6. Final Check
+### 7. Final Check
 
 ```bash
 ./install.sh --check
@@ -497,6 +519,46 @@ These links are created in:
 
 Existing files and unrelated symbolic links are preserved.
 
+## GitHub CLI
+
+The GitHub CLI is installed from GitHub's official apt repository instead of Ubuntu's archive, which lags behind upstream releases.
+
+The installer:
+
+- Downloads the repository signing key and verifies it against the fingerprints published in the [GitHub CLI installation docs](https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The repository is not added if they do not match.
+- Adds `/etc/apt/sources.list.d/github-cli.list` and installs `gh` with APT, so regular `sudo apt upgrade` keeps it current.
+- Falls back to Ubuntu's `gh` package if the repository cannot be set up.
+
+Zsh completion for `gh` is generated once into `~/.cache/zsh/completions/_gh` and refreshed automatically when `gh` is upgraded.
+
+### Contribution Workflow
+
+The `main` branch is protected by a repository ruleset:
+
+- Direct pushes are rejected. Changes must go through a pull request.
+- Force pushes and branch deletion are blocked.
+- No approval is required, so a single maintainer can merge their own pull requests.
+
+Typical workflow:
+
+```bash
+git switch -c my-change
+# edit, then commit
+git push -u origin my-change
+
+gh pr create --fill
+gh pr merge --merge --delete-branch
+
+git switch main
+git pull --ff-only
+```
+
+### Releases
+
+```bash
+gh release create vX.Y.Z --target main --generate-notes
+```
+
 ## Shell Aliases
 
 ### Directory Listings
@@ -591,6 +653,9 @@ git status --short
 - [x] Corporate GitLab SSH alias and identity configuration
 - [x] Required personal GitHub key check in `--check`
 - [x] Post-installation documentation (key registration, authentication tests, remote switch)
+- [x] GitHub CLI from the official repository with verified signing key
+- [x] Protected `main` branch with pull request workflow
+- [x] First release (v1.0.0)
 
 ### Future Work
 

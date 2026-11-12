@@ -41,6 +41,7 @@ PACKAGES=(
     # Core
     git
     curl
+    gnupg
     wget
     unzip
     zip
@@ -125,6 +126,94 @@ log "All requested packages are available."
 
 log "Installing packages..."
 sudo apt-get install -y "${PACKAGES[@]}"
+
+# ------------------------------------------
+# GITHUB CLI (OFFICIAL REPOSITORY)
+# ------------------------------------------
+
+# Ubuntu's gh package lags behind upstream, so use GitHub's apt repository.
+# The signing keyring is verified against GitHub's published fingerprints:
+# https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+
+GH_KEYRING="/etc/apt/keyrings/githubcli-archive-keyring.gpg"
+GH_KEYRING_URL="https://cli.github.com/packages/githubcli-archive-keyring.gpg"
+GH_SOURCE="/etc/apt/sources.list.d/github-cli.list"
+GH_FINGERPRINTS=(
+    2C6106201985B60E6C7AC87323F3D4EA75716059
+    7F38BBB59D064DBCB3D84D725612B36462313325
+)
+
+# Succeed only if every primary key in the keyring is a published one.
+verify_gh_keyring() {
+    local keyring="$1"
+    local fingerprint
+    local found=0
+
+    while read -r fingerprint; do
+        [[ " ${GH_FINGERPRINTS[*]} " == *" $fingerprint "* ]] || return 1
+        found=1
+    done < <(
+        gpg --show-keys --with-colons "$keyring" 2>/dev/null |
+            awk -F: '$1 == "pub" {primary = 1; next}
+                     $1 == "fpr" && primary {print $10; primary = 0}'
+    )
+
+    (( found ))
+}
+
+setup_github_cli_repo() {
+    local tmp_keyring
+    local source_line
+
+    source_line="deb [arch=$(dpkg --print-architecture) signed-by=$GH_KEYRING] https://cli.github.com/packages stable main"
+
+    if [[ -f "$GH_KEYRING" ]] && verify_gh_keyring "$GH_KEYRING" &&
+       [[ -f "$GH_SOURCE" && "$(cat "$GH_SOURCE")" == "$source_line" ]]; then
+        log "GitHub CLI repository already configured."
+        return 0
+    fi
+
+    tmp_keyring="$(mktemp)"
+
+    if ! curl -fsSL -o "$tmp_keyring" "$GH_KEYRING_URL"; then
+        rm -f "$tmp_keyring"
+        error "Could not download the GitHub CLI signing key."
+        return 1
+    fi
+
+    if ! verify_gh_keyring "$tmp_keyring"; then
+        rm -f "$tmp_keyring"
+        error "GitHub CLI signing key fingerprint mismatch. Repository not added."
+        return 1
+    fi
+
+    # Called from an if statement, so errexit does not apply here.
+    sudo install -d -m 755 /etc/apt/keyrings &&
+        sudo install -m 644 "$tmp_keyring" "$GH_KEYRING" || {
+        rm -f "$tmp_keyring"
+        error "Could not install the GitHub CLI signing key."
+        return 1
+    }
+
+    rm -f "$tmp_keyring"
+
+    printf '%s\n' "$source_line" | sudo tee "$GH_SOURCE" >/dev/null || {
+        error "Could not add the GitHub CLI repository."
+        return 1
+    }
+
+    log "GitHub CLI repository added."
+}
+
+log "Installing GitHub CLI..."
+
+if setup_github_cli_repo; then
+    sudo apt-get update
+else
+    error "Falling back to the Ubuntu gh package."
+fi
+
+sudo apt-get install -y gh
 
 # ------------------------------------------
 # UBUNTU CLI COMPATIBILITY

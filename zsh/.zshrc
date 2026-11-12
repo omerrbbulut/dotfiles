@@ -34,6 +34,19 @@ setopt SHARE_HISTORY
 
 autoload -Uz compinit
 
+# Cached completions for tools that generate their own.
+ZSH_COMPLETION_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
+mkdir -p "$ZSH_COMPLETION_CACHE"
+fpath=("$ZSH_COMPLETION_CACHE" $fpath)
+
+# GitHub CLI: regenerate only when the gh binary is newer than the cache.
+if (( $+commands[gh] )); then
+    if [[ ! -s "$ZSH_COMPLETION_CACHE/_gh" ||
+          "$commands[gh]" -nt "$ZSH_COMPLETION_CACHE/_gh" ]]; then
+        gh completion -s zsh >| "$ZSH_COMPLETION_CACHE/_gh" 2>/dev/null
+    fi
+fi
+
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 
