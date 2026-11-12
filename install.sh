@@ -514,6 +514,7 @@ check_installation() {
         git
         fzf
         zoxide
+        eza
     )
 
     local cmd

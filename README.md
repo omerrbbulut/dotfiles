@@ -19,7 +19,7 @@ Designed for a consistent, reproducible terminal-based development environment a
 | Configuration Management | GNU Stow |
 | Version Control | Git |
 | SSH Authentication | OpenSSH Agent |
-| CLI Tools | fzf, zoxide, ripgrep, fd, bat, btop |
+| CLI Tools | eza, fzf, zoxide, ripgrep, fd, bat, btop |
 
 ## Supported Systems
 
@@ -113,11 +113,101 @@ Existing SSH private keys are preserved.
 
 This verifies installed tools, configuration symlinks, fonts, SSH setup, and tmux plugins.
 
-Some SSH checks require the relevant identities to have been configured.
+The personal GitHub key (`~/.ssh/github_personal`) is required: the check fails if it is missing. Run `./install.sh --ssh` to create it.
+
+The corporate GitLab key is optional and is only reported when absent.
 
 ### 5. Restart the Terminal
 
 Restart Kitty or open a new terminal session to load the configured shell environment.
+
+Kitty and tmux start Zsh directly, even if the login shell is still Bash.
+
+## Post-Installation Steps
+
+The installer cannot complete these steps. Perform them manually after `./install.sh --all`.
+
+### 1. Register Public SSH Keys
+
+The installer creates key pairs but does not upload them.
+
+Print each public key:
+
+```bash
+cat ~/.ssh/github_personal.pub
+cat ~/.ssh/gitlab_work.pub
+```
+
+Register them:
+
+| Key | Where |
+|-----|-------|
+| `github_personal.pub` | GitHub → Settings → SSH and GPG keys → New SSH key (type: Authentication) |
+| `gitlab_work.pub` | Corporate GitLab → Preferences → SSH Keys → Add new key |
+
+Only ever share the `.pub` file. Never upload or copy the private key.
+
+### 2. Test Authentication
+
+```bash
+ssh -T git@github.com
+ssh -T gitlab-work
+```
+
+Expected responses:
+
+```text
+Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
+Welcome to GitLab, @<username>!
+```
+
+On the first connection SSH asks whether to trust the server host key.
+
+- GitHub: compare against GitHub's published SSH key fingerprints.
+- Corporate GitLab: obtain the fingerprint from the GitLab administrator before accepting.
+
+### 3. Switch This Repository to SSH
+
+The repository is usually cloned over HTTPS before an SSH key exists. Afterwards, switch the remote so pushes use the SSH key instead of a token:
+
+```bash
+git remote set-url origin git@github.com:<username>/dotfiles.git
+git fetch origin
+```
+
+### 4. Set Zsh as the Login Shell (Optional)
+
+Other terminals and SSH logins use the login shell. To use Zsh everywhere:
+
+```bash
+chsh -s /usr/bin/zsh
+```
+
+Log out and back in for the change to take effect.
+
+### 5. Post-Quantum Key Exchange Warning (Optional)
+
+OpenSSH 10 and later warn when a server does not support post-quantum key exchange:
+
+```text
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+```
+
+This is caused by an older OpenSSH version on the server. The connection remains encrypted. The proper fix is a server-side upgrade.
+
+To silence the warning for the corporate server only, add the following to the `Host gitlab-work` block in `~/.ssh/config.work`:
+
+```sshconfig
+    WarnWeakCrypto no
+```
+
+Do not disable it globally.
+
+### 6. Final Check
+
+```bash
+./install.sh --check
+```
 
 ## Available Commands
 
@@ -397,6 +487,36 @@ These links are created in:
 
 Existing files and unrelated symbolic links are preserved.
 
+## Shell Aliases
+
+### Directory Listings
+
+When `eza` is installed, the following aliases use it. Otherwise they fall back to colored `ls`.
+
+| Alias | Description |
+|-------|-------------|
+| `ls` | Icons and colors, directories first |
+| `ll` | Long listing including hidden files, Git status, ISO timestamps |
+| `la` | All files including hidden files |
+| `lt` | Tree view, two levels, respecting `.gitignore` (eza only) |
+
+Icons require the installed Nerd Font. They are disabled automatically when output is piped.
+
+### Git and tmux
+
+| Alias | Command |
+|-------|---------|
+| `gs` | `git status` |
+| `gd` | `git diff` |
+| `ga` | `git add` |
+| `gc` | `git commit` |
+| `gl` | `git log --oneline --graph --decorate` |
+| `tn <name>` | `tmux new -s <name>` |
+| `ta` | `tmux attach` |
+| `tl` | `tmux list-sessions` |
+
+The tmux prefix is `Ctrl+a`.
+
 ## Validation
 
 ### Verify Installation
@@ -455,6 +575,7 @@ git status --short
 - [x] Ubuntu package installation script
 - [x] Installer health checks
 - [x] Dry-run support
+- [x] eza directory listings
 
 ### Future Work
 

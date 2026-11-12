@@ -65,6 +65,7 @@ PACKAGES=(
     fd-find
     bat
     btop
+    eza
     tree
     jq
 
