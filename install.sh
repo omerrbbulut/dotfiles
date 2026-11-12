@@ -592,6 +592,11 @@ check_installation() {
             warn "Incomplete SSH key pair: $key"
             failed=1
 
+        elif [[ "$key" == github_personal ]]; then
+            # The personal GitHub identity is required; work GitLab is optional.
+            warn "Required SSH key missing: $key (run ./install.sh --ssh)"
+            failed=1
+
         else
             info "SSH identity not configured: $key"
         fi
