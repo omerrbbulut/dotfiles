@@ -58,8 +58,7 @@ dotfiles/
 ├── git/
 │   ├── .gitconfig
 │   └── .config/git/
-│       ├── personal.gitconfig
-│       └── work.gitconfig
+│       └── personal.gitconfig
 └── ssh/
     └── .ssh/config
 ```
@@ -369,6 +368,7 @@ The setup script can:
 - Create missing SSH key pairs with user confirmation.
 - Preserve existing keys.
 - Configure corporate GitLab connection settings.
+- Create the local corporate Git identity (prompts for work name and email).
 - Add keys to an existing SSH agent.
 - Detect identities already loaded into the agent.
 
@@ -415,6 +415,16 @@ Identity configuration:
 ```text
 ~/.config/git/work.gitconfig
 ```
+
+This file is created locally by `./install.sh --ssh` and is not tracked by Git, so the corporate email never enters the repository:
+
+```gitconfig
+[user]
+    name = Your Name
+    email = you@company.example
+```
+
+`./install.sh --check` fails if corporate GitLab is configured but this file is missing.
 
 Corporate repositories should use the configured `gitlab-work` SSH alias.
 
