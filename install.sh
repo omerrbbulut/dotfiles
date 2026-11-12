@@ -531,7 +531,6 @@ check_installation() {
         "$HOME/.config/kitty/kitty.conf"
         "$HOME/.config/starship.toml"
         "$HOME/.config/git/personal.gitconfig"
-        "$HOME/.config/git/work.gitconfig"
 	"$HOME/.ssh/config"
     )
 
@@ -605,6 +604,17 @@ check_installation() {
 
     if [[ -f "$HOME/.ssh/config.work" ]]; then
         success "Corporate SSH configuration available"
+
+        # The work Git identity is local and must not be a tracked symlink.
+        local work_identity="$HOME/.config/git/work.gitconfig"
+
+        if [[ -f "$work_identity" && ! -L "$work_identity" ]] &&
+           git config -f "$work_identity" --get user.email >/dev/null; then
+            success "Corporate Git identity: $work_identity"
+        else
+            warn "Corporate Git identity missing (run ./install.sh --ssh)"
+            failed=1
+        fi
     else
         info "Corporate GitLab configuration not present (optional)"
     fi

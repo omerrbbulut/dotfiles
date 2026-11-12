@@ -4,6 +4,9 @@ set -Eeuo pipefail
 
 SSH_DIR="$HOME/.ssh"
 WORK_CONFIG="$SSH_DIR/config.work"
+WORK_IDENTITY="$HOME/.config/git/work.gitconfig"
+PERSONAL_IDENTITY="$HOME/.config/git/personal.gitconfig"
+WORK_EMAIL=""
 
 log() {
     printf '\033[1;34m[INFO]\033[0m %s\n' "$*"
@@ -109,6 +112,57 @@ add_key_to_agent() {
     fi
 }
 
+configure_work_identity() {
+    local name
+    local default_name
+
+    # Existing local identity: reuse its email.
+    if [[ -f "$WORK_IDENTITY" && ! -L "$WORK_IDENTITY" ]]; then
+        WORK_EMAIL="$(git config -f "$WORK_IDENTITY" --get user.email || true)"
+
+        if [[ -n "$WORK_EMAIL" ]]; then
+            ok "Existing work Git identity preserved"
+            return 0
+        fi
+    fi
+
+    if [[ ! -t 0 ]]; then
+        warn "Non-interactive session: skipping work Git identity."
+        return 1
+    fi
+
+    default_name="$(git config -f "$PERSONAL_IDENTITY" --get user.name 2>/dev/null || true)"
+
+    read -r -p "Work Git name [$default_name]: " name
+    read -r -p "Work Git email: " WORK_EMAIL
+
+    name="${name:-$default_name}"
+
+    if [[ -z "$name" ||
+          ! "$WORK_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+        warn "Invalid work name or email."
+        WORK_EMAIL=""
+        return 1
+    fi
+
+    # Replace a stale symlink from older versions that tracked this file.
+    [[ -L "$WORK_IDENTITY" ]] && rm -f "$WORK_IDENTITY"
+
+    mkdir -p "$(dirname "$WORK_IDENTITY")"
+
+    (
+        umask 077
+        git config -f "$WORK_IDENTITY" user.name "$name"
+        git config -f "$WORK_IDENTITY" user.email "$WORK_EMAIL"
+    ) || {
+        warn "Could not create $WORK_IDENTITY"
+        WORK_EMAIL=""
+        return 1
+    }
+
+    ok "Work Git identity created: $WORK_IDENTITY"
+}
+
 configure_work_gitlab() {
     local hostname
     local port
@@ -178,11 +232,15 @@ main() {
     if [[ -e "$WORK_CONFIG" || -L "$WORK_CONFIG" ]]; then
         ok "Existing work configuration preserved"
 
-        create_key gitlab_work "work@example.com"
+        if configure_work_identity; then
+            create_key gitlab_work "$WORK_EMAIL"
+        fi
 
     elif confirm "Configure corporate GitLab?"; then
 
-        create_key gitlab_work "work@example.com"
+        if configure_work_identity; then
+            create_key gitlab_work "$WORK_EMAIL"
+        fi
 
         if [[ -f "$SSH_DIR/gitlab_work" &&
               -f "$SSH_DIR/gitlab_work.pub" ]]; then
