@@ -25,15 +25,15 @@ Designed for a consistent, reproducible terminal-based development environment a
 
 | Distribution | Status |
 |--------------|--------|
+| Ubuntu 26.04 LTS | Supported; validated on a fresh installation |
 | Ubuntu 24.04 LTS | Supported; tested on an existing installation |
-| Ubuntu 26.04 LTS | Experimental; validation required |
 | Arch Linux | Future Work |
 
 The current installer targets Ubuntu 24.04 and Ubuntu 26.04.
 
-Ubuntu 24.04 configuration and installation checks have been validated on an existing system. A completely fresh installation has not yet been tested.
+Ubuntu 26.04 has been validated end to end on a freshly installed system: full installation with `./install.sh --all`, SSH authentication to GitHub and corporate GitLab, and a passing `./install.sh --check`.
 
-Ubuntu 26.04 requires additional validation.
+Ubuntu 24.04 configuration and installation checks have been validated on an existing system. A completely fresh 24.04 installation has not yet been tested.
 
 Arch Linux support is planned but is not currently part of the supported installation workflow.
 
@@ -537,6 +537,7 @@ The tmux prefix is `Ctrl+a`.
 bash -n install.sh
 bash -n packages/ubuntu.sh
 bash -n scripts/setup-ssh.sh
+zsh -n zsh/.zshrc
 ```
 
 ### Verify Git Changes
@@ -576,11 +577,16 @@ git status --short
 - [x] Installer health checks
 - [x] Dry-run support
 - [x] eza directory listings
+- [x] Validate installation on a clean Ubuntu 26.04 system
+- [x] Corporate GitLab SSH alias and identity configuration
+- [x] Required personal GitHub key check in `--check`
+- [x] Post-installation documentation (key registration, authentication tests, remote switch)
 
 ### Future Work
 
 - [ ] Validate installation on a clean Ubuntu 24.04 system
-- [ ] Validate installation on Ubuntu 26.04
+- [ ] Print public keys and registration instructions at the end of SSH setup
+- [ ] Offer to set Zsh as the login shell during installation
 - [ ] Implement automated installer integration tests
 - [ ] Improve first-run setup and error handling
 - [ ] Validate installation with existing conflicting configuration files
