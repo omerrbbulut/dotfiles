@@ -511,6 +511,7 @@ check_installation() {
         fzf
         zoxide
         eza
+        gh
     )
 
     local cmd
@@ -544,6 +545,15 @@ check_installation() {
             failed=1
         fi
     done
+
+    # GitHub CLI login is a post-installation step, so only report it.
+    if command -v gh >/dev/null 2>&1; then
+        if gh auth status --hostname github.com >/dev/null 2>&1; then
+            success "GitHub CLI authenticated"
+        else
+            warn "GitHub CLI not logged in (run: gh auth login)"
+        fi
+    fi
 
     if fc-list : family | grep -i 'JetBrainsMono Nerd Font' >/dev/null; then
 	success "Nerd Font installed"
