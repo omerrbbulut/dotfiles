@@ -56,7 +56,59 @@ compinit
 # KEYBINDINGS
 # ------------------------------------------
 
+# ------------------------------------------
+# KEYBINDINGS
+# Ubuntu / Arch / GNOME Terminal / Kitty
+# ------------------------------------------
+
+# Emacs-style line editing
 bindkey -e
+
+# Ctrl + Left / Right: Navigate between words
+bindkey '^[[1;5D' backward-word
+bindkey '^[[1;5C' forward-word
+
+# Alternative terminal escape sequences
+bindkey '^[[5D' backward-word
+bindkey '^[[5C' forward-word
+
+# Ctrl + Delete: Delete next word
+bindkey '^[[3;5~' kill-word
+
+# Ctrl + Backspace: Delete previous word
+bindkey '^H' backward-kill-word
+
+# Home / End: Beginning / end of line
+bindkey '^[[H' beginning-of-line
+bindkey '^[[F' end-of-line
+bindkey '^[[1~' beginning-of-line
+bindkey '^[[4~' end-of-line
+
+# Delete
+bindkey '^[[3~' delete-char
+
+# Ctrl + A / E: Beginning / end of line
+bindkey '^A' beginning-of-line
+bindkey '^E' end-of-line
+
+# Alt + Left / Right: Navigate between words
+bindkey '^[^[[D' backward-word
+bindkey '^[^[[C' forward-word
+
+# Alt + Backspace: Delete previous word
+bindkey '^[^?' backward-kill-word
+
+# Ctrl + W: Delete previous word
+bindkey '^W' backward-kill-word
+
+# Ctrl + U: Delete from cursor to beginning
+bindkey '^U' backward-kill-line
+
+# Ctrl + K: Delete from cursor to end
+bindkey '^K' kill-line
+
+# Ctrl + Y: Paste last deleted text
+bindkey '^Y' yank
 
 # ------------------------------------------
 # FZF
