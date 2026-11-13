@@ -589,6 +589,17 @@ Icons require the installed Nerd Font. They are disabled automatically when outp
 
 The tmux prefix is `Ctrl+a`.
 
+## Machine-Specific Settings
+
+Settings that only apply to one computer (for example extra tool paths such as STM32CubeCLI) go in `~/.zprofile.local`. This file is not tracked by Git and is sourced by `.zprofile` only if it exists:
+
+```zsh
+# ~/.zprofile.local
+if [[ -d /opt/st/STM32CubeProgrammer/bin ]]; then
+    path=(/opt/st/STM32CubeProgrammer/bin $path)
+fi
+```
+
 ## Validation
 
 ### Verify Installation
