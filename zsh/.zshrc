@@ -198,3 +198,4 @@ do
         break
     fi
 done
+export PATH="$HOME/.local/bin:$PATH"

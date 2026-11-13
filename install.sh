@@ -405,6 +405,7 @@ verify_installation() {
         "$HOME/.config/kitty/kitty.conf"
         "$HOME/.config/starship.toml"
         "$HOME/.zshrc"
+        "$HOME/.zprofile"
         "$HOME/.tmux.conf"
     )
 
@@ -527,6 +528,7 @@ check_installation() {
 
     local files=(
         "$HOME/.zshrc"
+        "$HOME/.zprofile"
         "$HOME/.tmux.conf"
         "$HOME/.gitconfig"
         "$HOME/.config/kitty/kitty.conf"
