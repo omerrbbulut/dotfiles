@@ -198,3 +198,4 @@ do
         break
     fi
 done
+setopt INTERACTIVE_COMMENTS
